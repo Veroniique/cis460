@@ -72,10 +72,32 @@ Resources:
       ImageId: !Ref LatestAmiId
       InstanceType:
         !FindInMap [EnvironmentTypeToInstanceType, !Ref EnvironmentType, InstanceType]
+      # Normal operations: InboundAccessSecurityGroup allows shell access from inside the VPC network.
+      # Incident response containment action:
+      # To isolate the bastion during an investigation, update this list from:
+      #   - !Ref InboundAccessSecurityGroup
+      # to:
+      #   - !Ref BastionIsolationSecurityGrou
       SecurityGroups: 
         - !Ref 'InboundAccessSecurityGroup'
       KeyName: !Ref 'KeyName'
   InboundAccessSecurityGroup:
+    BastionIsolationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Isolate the bastion during incident response"
+      VpcId: !Ref VPC
+      # Incident Response Playbook - Bastion Isolation
+      # Scenario: Automated monitoring detects anomalous network activity from the bastion host.
+      # 1. Confirm the alert and preserve relevant logs before making containment changes.
+      # 2. Contain the host by replacing InboundAccessSecurityGroup with BastionIsolationSecurityGroup.
+      # 3. This isolation security group has no inbound rules, blocking SSH and all other inbound traffic.
+      # 4. The egress rule below removes the default allow-all outbound behavior.
+      # 5. Investigate using logs, snapshots, CloudTrail, VPC Flow Logs, and other evidence.
+      # 6. Rebuild or remediate the bastion before restoring normal access.
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 127.0.0.1/32
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: "Allow inbound tcp on SSH port"
